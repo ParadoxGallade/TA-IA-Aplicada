@@ -1,0 +1,14 @@
+Comparacion de modelos baseline - Entregable Parcial
+Variable objetivo: siniestros fatales por departamento y mes
+Entrenamiento: 2021-04 a 2024-03 (900 filas)
+Prueba: 2024-04 a 2024-12 (225 filas)
+
+            modelo      MAE     RMSE
+  Regresion lineal 2.239655 3.245885
+Arbol de regresion 1.890078 3.385944
+
+Mejor modelo: Regresion lineal (MAE=2.240, RMSE=3.246)
+
+El MAPE no se usa porque el 21% de las filas tiene siniestros = 0 (division por cero).
+Estos resultados son un baseline inicial para el Entregable Parcial. En el Entregable Final
+se compararan ademas KNN y MLP, segun lo propuesto en el README.
