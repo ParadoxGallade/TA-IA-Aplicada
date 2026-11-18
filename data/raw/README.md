@@ -1,4 +1,4 @@
-# Dataset: personas involucradas en siniestros de tránsito fatales (ONSV, 2021–2025)
+# Dataset: personas involucradas en siniestros de tránsito fatales (ONSV, 2021–2025; se usa 2021–2023)
 
 ## Origen
 
@@ -49,7 +49,7 @@ Para el modelo **solo se usan `CÓDIGO SINIESTRO`, `FECHA` y `DEPARTAMENTO`**. L
 
 Las tres columnas que usa el modelo (`CÓDIGO SINIESTRO`, `FECHA`, `DEPARTAMENTO`) **no tienen vacíos**, así que no hace falta imputar.
 
-## Problema detectado: 2025 incompleto
+## Problema detectado: 2024 y 2025 preliminares
 
 Siniestros fatales únicos por mes a nivel nacional:
 
@@ -68,9 +68,9 @@ Siniestros fatales únicos por mes a nivel nacional:
 | Nov | 189 | 198 | 153 | 110 | **24** |
 | Dic | 195 | 211 | 168 | 126 | **25** |
 
-Desde abril de 2025 el conteo cae a menos de la mitad de golpe y sigue bajando. Es lo esperable en datos **preliminares** (siniestros que todavía no se cargan al sistema), no una mejora real de la seguridad vial. Por eso el procesamiento usa **enero 2021 – diciembre 2024** (48 meses) y descarta 2025 completo.
+Desde abril de 2025 el conteo cae a menos de la mitad de golpe y sigue bajando. Es lo esperable en datos **preliminares** (siniestros que todavía no se cargan al sistema), no una mejora real de la seguridad vial.
 
-2024 también es preliminar y está por debajo de 2021–2023, pero su nivel es estable dentro del año, así que se mantiene. Hay que tenerlo en cuenta al interpretar los resultados (ver EDA).
+2024 también es preliminar (Nota 2 del archivo) y está por debajo de 2021–2023 en todos los meses. Por indicación de la profesora, **solo se usan los años con data completa: enero 2021 – diciembre 2023 (36 meses)**. 2024 y 2025 se descartan.
 
 ## Datos procesados (`data/processed/`)
 
@@ -78,16 +78,17 @@ Se generan con `python src/preprocessing.py`:
 
 ```
 personas (25 412 filas)
-   │  filtrar 2021–2024 (23 502 filas)
+   │  filtrar 2021–2023 (18 995 filas)
    │  dejar una fila por CÓDIGO SINIESTRO (drop_duplicates)
    ▼
-siniestros únicos 2021–2024 (8 428)
+siniestros únicos 2021–2023 (6 873)
    │  contar por departamento y mes, rellenar meses sin siniestros con 0
    ▼
-siniestros_depto_mes.csv   → 1 200 filas (25 deptos × 48 meses)
-   │  agregar lags y promedio móvil, quitar los 3 primeros meses de cada depto
+siniestros_depto_mes.csv   → 900 filas (25 deptos × 36 meses)
+   │  agregar lags (1, 2, 3, 6, 12) y promedio móvil
+   │  quitar los 12 primeros meses de cada depto (no tienen lag_12)
    ▼
-dataset_modelo.csv         → 1 125 filas
+dataset_modelo.csv         → 600 filas (25 deptos × 24 meses: 2022–2023)
 ```
 
 | Columna | Descripción |
@@ -96,7 +97,8 @@ dataset_modelo.csv         → 1 125 filas
 | `periodo` | Año-mes (AAAA-MM) |
 | `siniestros` | **Target:** número de siniestros fatales en ese departamento y mes |
 | `lag_1`, `lag_2`, `lag_3` | Siniestros del mismo departamento 1, 2 y 3 meses antes |
+| `lag_6`, `lag_12` | Siniestros del mismo departamento 6 y 12 meses antes (`lag_12` = mismo mes del año anterior) |
 | `prom_movil_3` | Promedio de los 3 meses anteriores |
 | `anio`, `mes` | Año y mes del año (1–12) |
 
-**Dato clave para el modelado:** el 21 % de las filas tiene `siniestros = 0` (departamentos como Moquegua, Ucayali o Amazonas promedian ~1 siniestro al mes). Por eso el MAPE no sirve (divide entre cero) y se usan **MAE y RMSE**.
+**Dato clave para el modelado:** el 15 % de las filas de `dataset_modelo.csv` tiene `siniestros = 0` (departamentos como Moquegua, Ucayali o Amazonas promedian ~1 siniestro al mes). Por eso el MAPE no sirve (divide entre cero) y se usan **MAE y RMSE**.
