@@ -125,9 +125,12 @@ dataset['prom_movil_3'] = (dataset['lag_1'] + dataset['lag_2'] + dataset['lag_3'
 dataset['anio'] = dataset['periodo'].str[:4].astype(int)   # 'aaaa-mm' -> aaaa
 dataset['mes'] = dataset['periodo'].str[5:].astype(int)    # 'aaaa-mm' -> mm
 
-# Los 12 primeros meses de cada departamento (todo 2021) no tienen lag_12 -> se eliminan.
-# 2021 igual se usa: sus valores aparecen como lags de 2022.
-dataset = dataset.dropna().reset_index(drop=True)
+# Los 3 primeros meses de cada departamento (ene-mar 2021) no tienen lag_1, lag_2 y lag_3
+# -> se eliminan. Quedan 33 meses por departamento (abr-2021 a dic-2023).
+# lag_6 y lag_12 se guardan solo para la prueba de rezagos de notebooks/02_modelos.ipynb:
+# quedan vacíos en los primeros meses (lag_12 recién existe desde ene-2022) y NO son
+# entradas de los modelos finales, porque en validación no redujeron el error.
+dataset = dataset.dropna(subset=['lag_1', 'lag_2', 'lag_3']).reset_index(drop=True)
 
 
 # =============================================================================

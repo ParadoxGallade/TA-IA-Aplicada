@@ -1,14 +1,89 @@
-Comparacion de modelos baseline - Entregable Parcial
-Variable objetivo: siniestros fatales por departamento y mes
-Entrenamiento: 2021-04 a 2024-03 (900 filas)
-Prueba: 2024-04 a 2024-12 (225 filas)
+COMPARACION DE MODELOS - ENTREGABLE FINAL
+Prediccion del numero mensual de siniestros de transito fatales por departamento (ONSV, 2021-2023)
+Generado por notebooks/02_modelos.ipynb (semilla 42)
 
-            modelo      MAE     RMSE
-  Regresion lineal 2.239655 3.245885
-Arbol de regresion 1.890078 3.385944
+1. DATOS Y PARTICION
+Variable objetivo: siniestros fatales por departamento y mes (825 filas = 25 departamentos x 33 meses).
+Entradas: lag_1, lag_2, lag_3, prom_movil_3, mes y departamento (One-Hot Encoding): 30 columnas.
+Particion temporal (no aleatoria):
+  sub-train  abr-2021 a dic-2022  525 filas  (probar hiperparametros)
+  validacion ene-2023 a jun-2023  150 filas  (elegir hiperparametros)
+  test       jul-2023 a dic-2023  150 filas  (evaluacion final)
+  train (ajuste final) = sub-train + validacion = 675 filas
 
-Mejor modelo: Regresion lineal (MAE=2.240, RMSE=3.246)
+2. RESULTADOS EN TEST (MAE_validacion = MAE en validacion con los hiperparametros elegidos)
+                       modelo           tipo  MAE_validacion  MAE  RMSE   R2  sesgo
+             Regresión lineal       baseline            2.95 2.85  3.81 0.82   1.35
+           Árbol de regresión       baseline            2.40 2.37  3.32 0.86   0.10
+                          KNN visto en clase            2.88 2.98  4.02 0.80   1.44
+                          MLP visto en clase            3.31 2.46  3.37 0.86   0.59
+                          SVR     literatura            2.70 2.58  3.50 0.85   0.96
+                Random Forest     literatura            2.50 2.21  3.08 0.88   0.07
+Ref. promedio móvil (3 meses)     referencia            2.53 2.10  3.09 0.88   0.23
+            Ref. mes anterior     referencia            2.64 2.53  3.76 0.82   0.15
 
-El MAPE no se usa porque el 21% de las filas tiene siniestros = 0 (division por cero).
-Estos resultados son un baseline inicial para el Entregable Parcial. En el Entregable Final
-se compararan ademas KNN y MLP, segun lo propuesto en el README.
+sesgo = promedio de (prediccion - real). Positivo: el modelo predice de mas.
+No se usa MAPE porque el 14 % de las filas tiene 0 siniestros (division entre cero).
+
+3. HIPERPARAMETROS (busqueda en grilla; se elige el menor MAE en validacion)
+            Modelo        Hiperparámetro       Valores probados Mejor valor
+  Regresión lineal (sin hiperparámetros)                      -           -
+Árbol de regresión             max_depth          3, 4, 5, 6, 8           5
+Árbol de regresión      min_samples_leaf               1, 5, 10           1
+               KNN           n_neighbors     3, 5, 7, 9, 11, 15          15
+               KNN               weights      uniform, distance     uniform
+               MLP    hidden_layer_sizes (16,), (32,), (32, 16)       (32,)
+               MLP                 alpha      0.0001, 0.01, 1.0         1.0
+               MLP    learning_rate_init            0.001, 0.01       0.001
+               SVR                kernel            linear, rbf      linear
+               SVR                     C             1, 10, 100           1
+               SVR               epsilon          0.1, 0.5, 1.0         0.1
+     Random Forest          n_estimators               100, 300         100
+     Random Forest             max_depth            None, 5, 10           5
+     Random Forest      min_samples_leaf                   1, 5           1
+
+4. PRUEBA DE REZAGOS (MAE en validacion)
+                    A: con lag_6 y lag_12 (300 filas)  B: sin ellos (300 filas)  C: sin ellos, desde 2021 (525 filas)
+Regresión lineal                                 3.05                      3.07                                  2.95
+Árbol de regresión                               2.58                      2.53                                  2.40
+KNN                                              2.84                      2.83                                  2.88
+MLP                                              3.54                      3.89                                  3.31
+SVR                                              2.61                      2.60                                  2.70
+Random Forest                                    2.66                      2.59                                  2.50
+Quitar lag_6 y lag_12 permite entrenar desde abril de 2021 (525 filas de sub-train en vez de 300).
+Por eso las entradas finales son la opcion C.
+
+5. ANALISIS
+- Mejor modelo entrenado en test: Random Forest (MAE 2.21, RMSE 3.08, R2 0.88).
+  En validacion el menor MAE fue de Árbol de regresión (2.40).
+- Frente a la referencia de promedio movil (MAE 2.10, RMSE 3.09):
+  diferencia de MAE +0.11 (IC 95 %: -0.09 a +0.31).
+- Frente al arbol de regresion: diferencia de MAE -0.16 (IC 95 %: -0.39 a +0.05).
+- Frente a la regresion lineal: diferencia de MAE -0.63 (IC 95 %: -1.04 a -0.25).
+  Si el intervalo incluye el 0, la diferencia no es concluyente con 150 filas de test.
+- Por que destaca Random Forest: promedia muchos arboles, asi que suaviza el ruido de cada mes, y casi
+  toda su decision se apoya en prom_movil_3 (importancia 0.75). Su sesgo es +0.07.
+- Por que fallan regresion lineal, KNN y SVR: predicen de mas (sesgo +1.35, +1.44 y +0.96).
+  Las 25 columnas de departamento les hacen memorizar el nivel de 2021-2022, y 2023 tuvo 19 % menos
+  siniestros que 2022. Prueba (analisis posterior, no usado para elegir):
+                    MAE val. con depto.  MAE val. sin depto.  MAE test con depto.  MAE test sin depto.  sesgo con depto.  sesgo sin depto.
+modelo                                                                                                                                    
+Regresión lineal                   2.95                 2.64                 2.85                 2.18              1.35              0.28
+Árbol de regresión                 2.40                 2.51                 2.37                 2.19              0.10              0.08
+KNN                                2.88                 2.64                 2.98                 2.13              1.44              0.02
+MLP                                3.31                 2.69                 2.46                 2.18              0.59              0.11
+SVR                                2.70                 2.57                 2.58                 2.07              0.96             -0.01
+Random Forest                      2.50                 2.63                 2.21                 2.22              0.07             -0.06
+- Limite del problema: si los conteos fueran azar de Poisson alrededor de una tasa fija por departamento,
+  el MAE minimo seria 1.67; Random Forest obtiene 2.21. Lo que queda por mejorar
+  usando solo el historial de siniestros es, como maximo, medio siniestro por departamento y mes.
+- El R2 alto se debe sobre todo a la diferencia de escala entre departamentos (Lima vs. los demas),
+  no a acertar la variacion mes a mes. Por eso la metrica principal es el MAE.
+- Error por departamento: Lima tiene el mayor MAE (4.18) porque tiene mas siniestros
+  (38.7 al mes en test).
+
+6. LIMITACIONES
+- Solo 33 meses por departamento y un unico periodo de test de 6 meses (150 filas).
+- Nivel no estacionario: los siniestros registrados bajan de 2022 a 2023.
+- 2024 y 2025 se excluyen por ser registros preliminares (Nota 2 del archivo del ONSV).
+- Las entradas son solo el historial de siniestros; no hay variables externas (trafico, clima, feriados).

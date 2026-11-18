@@ -86,9 +86,9 @@ siniestros únicos 2021–2023 (6 873)
    ▼
 siniestros_depto_mes.csv   → 900 filas (25 deptos × 36 meses)
    │  agregar lags (1, 2, 3, 6, 12) y promedio móvil
-   │  quitar los 12 primeros meses de cada depto (no tienen lag_12)
+   │  quitar los 3 primeros meses de cada depto (no tienen lag_1, lag_2 y lag_3)
    ▼
-dataset_modelo.csv         → 600 filas (25 deptos × 24 meses: 2022–2023)
+dataset_modelo.csv         → 825 filas (25 deptos × 33 meses: abr-2021 a dic-2023)
 ```
 
 | Columna | Descripción |
@@ -97,8 +97,8 @@ dataset_modelo.csv         → 600 filas (25 deptos × 24 meses: 2022–2023)
 | `periodo` | Año-mes (AAAA-MM) |
 | `siniestros` | **Target:** número de siniestros fatales en ese departamento y mes |
 | `lag_1`, `lag_2`, `lag_3` | Siniestros del mismo departamento 1, 2 y 3 meses antes |
-| `lag_6`, `lag_12` | Siniestros del mismo departamento 6 y 12 meses antes (`lag_12` = mismo mes del año anterior) |
+| `lag_6`, `lag_12` | Siniestros del mismo departamento 6 y 12 meses antes (`lag_12` = mismo mes del año anterior). Quedan vacíos en los primeros meses y **no son entradas de los modelos finales**: solo se usan en la prueba de rezagos de `notebooks/02_modelos.ipynb` |
 | `prom_movil_3` | Promedio de los 3 meses anteriores |
-| `anio`, `mes` | Año y mes del año (1–12) |
+| `anio`, `mes` | Año y mes del año (1–12). Como entrada solo se usa `mes` |
 
-**Dato clave para el modelado:** el 15 % de las filas de `dataset_modelo.csv` tiene `siniestros = 0` (departamentos como Moquegua, Ucayali o Amazonas promedian ~1 siniestro al mes). Por eso el MAPE no sirve (divide entre cero) y se usan **MAE y RMSE**.
+**Dato clave para el modelado:** el 14 % de las filas de `dataset_modelo.csv` tiene `siniestros = 0` (departamentos como Moquegua, Ucayali o Amazonas promedian ~1 siniestro al mes). Por eso el MAPE no sirve (divide entre cero) y se usan **MAE, RMSE y R²**.
