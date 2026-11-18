@@ -1,4 +1,4 @@
-# Preprocesamiento de datos - Siniestros de tránsito fatales (ONSV 2021-2024)
+# Preprocesamiento de datos - Siniestros de tránsito fatales (ONSV 2021-2023)
 #
 # Entrada:  data/raw/BBDD_ONSV_PERSONAS_2021-2025_preliminar.xlsx  (1 fila por persona)
 # Salidas:  data/processed/siniestros_depto_mes.csv  (conteo de siniestros por departamento y mes)
@@ -9,8 +9,9 @@
 
 import pandas as pd
 
-# Último mes que se usa. 2025 está incompleto (registro preliminar), por eso se corta en 2024.
-FECHA_FIN = '2024-12'
+# Último mes que se usa. Según la Nota 2 del Excel, 2024 y 2025 son preliminares (incompletos),
+# así que solo se usan los años con data completa: 2021-2023.
+FECHA_FIN = '2023-12'
 
 
 # =============================================================================
@@ -61,9 +62,9 @@ df['FECHA'] = pd.to_datetime(df['FECHA'], format='%d/%m/%Y')
 # Periodo año-mes (ej. 2021-01)
 df['PERIODO'] = df['FECHA'].dt.to_period('M')
 
-# Quedarse con enero 2021 - diciembre 2024
+# Quedarse con enero 2021 - diciembre 2023
 df = df[df['PERIODO'] <= FECHA_FIN]
-print('\nPersonas en el periodo 2021-2024:', df.shape[0])
+print('\nPersonas en el periodo 2021-2023:', df.shape[0])
 
 
 # =============================================================================
@@ -113,6 +114,10 @@ dataset['lag_1'] = dataset.groupby('departamento')['siniestros'].shift(1)
 dataset['lag_2'] = dataset.groupby('departamento')['siniestros'].shift(2)
 dataset['lag_3'] = dataset.groupby('departamento')['siniestros'].shift(3)
 
+# Siniestros de 6 y 12 meses antes (lag_12 = mismo mes del año anterior -> estacionalidad anual)
+dataset['lag_6'] = dataset.groupby('departamento')['siniestros'].shift(6)
+dataset['lag_12'] = dataset.groupby('departamento')['siniestros'].shift(12)
+
 # Promedio de los 3 meses anteriores (no incluye el mes que se quiere predecir)
 dataset['prom_movil_3'] = (dataset['lag_1'] + dataset['lag_2'] + dataset['lag_3']) / 3
 
@@ -120,7 +125,8 @@ dataset['prom_movil_3'] = (dataset['lag_1'] + dataset['lag_2'] + dataset['lag_3'
 dataset['anio'] = dataset['periodo'].str[:4].astype(int)   # 'aaaa-mm' -> aaaa
 dataset['mes'] = dataset['periodo'].str[5:].astype(int)    # 'aaaa-mm' -> mm
 
-# Los 3 primeros meses de cada departamento no tienen 3 meses previos -> se eliminan
+# Los 12 primeros meses de cada departamento (todo 2021) no tienen lag_12 -> se eliminan.
+# 2021 igual se usa: sus valores aparecen como lags de 2022.
 dataset = dataset.dropna().reset_index(drop=True)
 
 
